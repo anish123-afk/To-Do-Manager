@@ -1,6 +1,9 @@
 import tkinter
 from tkinter import *
 from tkinter import font
+import json
+from tkinter import messagebox
+from tkinter import ttk
 
 ### creating a window 
 root = Tk()
@@ -14,54 +17,110 @@ root.configure(bg="#1e1e1e")
 
 task_var = tkinter.StringVar()
 tasks = []
-task_index = 1
+
 
 
 ### Functions
+# def get_clr(priority):
+#     if priority == 'HIGH':
+#           return "🔴"
+#     elif priority == 'MEDIUM':
+#          return "🟡"
+#     else:
+#          return "🟢"
 
 def add_task():
     task_var = ent_entry.get()
+    priority_var = priority_combobox.get()
     if task_var == "":
         return
-    tasks.append(task_var)
-    task_list.insert(task_index, task_var)
+    # clr = get_clr(priority_var)
+    # task_var = clr + " " + task_var
+    print_task_var = task_var + " [" + priority_var + "]"
+    tasks.append([task_var, priority_var])
+    task_list.insert(END, print_task_var)
+
+    with open("tasks.json", "w") as f:
+        json.dump(tasks, f, indent=4)
+
     ent_entry.delete(0, END)
     # add_frame(task_var)
     print(tasks)
 
 def del_task():
     selected_index = task_list.curselection()
-    index = selected_index[0]
-    task = task_list.get(index)
-
-    i = 0
-    for task_name in tasks:
-        if task_name == task:
-            break
-        else:
-            i += 1
     
-    tasks.pop(i)
-    task_list.delete(index)
+    if selected_index:
+        index = selected_index[0]
+        task = task_list.get(index)
+
+        if task.startswith("✔️"):
+             task_test_test = task.split(" ")[0:-1]
+             task_test = " ".join(task_test_test)
+        else:
+             task_test_test = task.split(" ")[0:-1]
+             task_test = " ".join(task_test_test)
+
+        i = 0
+        for task_row in tasks:
+            task_name = task_row[0]
+            if task_name == task_test:
+                break
+            else:
+                i += 1
+        
+        tasks.pop(i)
+        task_list.delete(index)
+
+        with open("tasks.json", "w") as f:
+                json.dump(tasks, f, indent=4)
+
+    else:
+         messagebox.showerror("Error", "Please select a task first!")
 
     print(tasks)
     
 
 def complete_task():
     selected_index = task_list.curselection()
-    index = selected_index[0]
-    task = task_list.get(index)
 
-    i = 0
-    for task_name in tasks:
-        if task_name == task:
-            break
-        else:
-            i += 1
+    if selected_index:
+        index = selected_index[0]
+        task = task_list.get(index)
+
+        task_test_test = task.split(" ")[0:-1]
+        task_test = " ".join(task_test_test)
+
+        i = 0
+        for task_row in tasks:
+            task_name = task_row[0]
+            if task_name == task_test:
+                break
+            else:
+                i += 1
+        
+        tasks[i][0] = f"✔️ {task_test}"
+        task_list.delete(index)
+        task_list.insert(index, f"✔️ {task}")
+
+        with open("tasks.json", "w") as f:
+                json.dump(tasks, f, indent=4)
+    else:
+        messagebox.showerror("Error", "Please select a task first!")
+
+        
+
+    print(tasks)
+
+
+def startup_task_load():
+    global tasks
+    with open("tasks.json", "r") as f:
+          tasks = json.load(f)
     
-    tasks[i] = f"✓ {task}"
-    task_list.delete(index)
-    task_list.insert(index, f"✓ {task}")
+    for task in tasks:
+         print_task_var = task[0] + " [" + task[1] + "]"
+         task_list.insert(END, print_task_var)
 
     print(tasks)
 
@@ -151,8 +210,8 @@ add_button = Button(
 
 add_button.grid(
     row=2,
-    column=1,
-    padx=(0, 20),
+    column=2,
+    padx=(5, 20),
     pady=10
 )
 
@@ -163,7 +222,7 @@ task_list = Listbox(
     root,
     height=10,
     width=50,
-    font=("Segoe UI", 12),
+    font=("Segoe UI Symbol", 12),
     bg="#2d2d2d",          
     fg="white",
     selectbackground="#00d4ff",
@@ -234,5 +293,40 @@ del_button.grid(
     pady=10,
     sticky="ew"
 )
+
+### priority system
+
+style = ttk.Style()
+style.theme_use("clam")
+
+style.configure(
+    "Custom.TCombobox",
+    fieldbackground="#2d2d2d",
+    background="#00d4ff",
+    foreground="white",
+    bordercolor="#00d4ff",
+    arrowcolor="#00d4ff",
+    padding=5
+)
+
+priority_combobox = ttk.Combobox(
+    root,
+    values=["HIGH", "MEDIUM", "LOW"],
+    state="readonly",
+    width=10,
+    font=("Segoe UI", 11),
+    style="Custom.TCombobox"
+)
+
+priority_combobox.set("Priority")
+
+priority_combobox.grid(
+    row=2,
+    column=1,
+    padx=5,
+    pady=10
+)
+
+startup_task_load()
 
 root.mainloop()
