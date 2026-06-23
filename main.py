@@ -4,6 +4,7 @@ from tkinter import font
 import json
 from tkinter import messagebox
 from tkinter import ttk
+import os
 
 ### creating a window 
 root = Tk()
@@ -37,8 +38,8 @@ def add_task():
     # clr = get_clr(priority_var)
     # task_var = clr + " " + task_var
     print_task_var = task_var + " [" + priority_var + "]"
-    tasks.append([task_var, priority_var])
-    task_list.insert(END, print_task_var)
+    tasks.append([task_var, priority_var, False])
+    pending_list.insert(END, print_task_var)
 
     with open("tasks.json", "w") as f:
         json.dump(tasks, f, indent=4)
@@ -48,32 +49,50 @@ def add_task():
     print(tasks)
 
 def del_task():
-    selected_index = task_list.curselection()
+    selected_index_pending = pending_list.curselection()
+    selected_index_completed = completed_list.curselection()
     
-    if selected_index:
-        index = selected_index[0]
-        task = task_list.get(index)
+    if selected_index_pending or selected_index_completed:
+        if selected_index_pending:
+            index = selected_index_pending[0]
+            task = pending_list.get(index)
+            
+            task_test_test = task.split(" ")[0:-1]
+            task_test = " ".join(task_test_test)
 
-        if task.startswith("✔️"):
-             task_test_test = task.split(" ")[0:-1]
-             task_test = " ".join(task_test_test)
-        else:
-             task_test_test = task.split(" ")[0:-1]
-             task_test = " ".join(task_test_test)
+            i = 0
+            for task_row in tasks:
+                task_name = task_row[0]
+                if task_name == task_test:
+                    break
+                else:
+                    i += 1
+            
+            tasks.pop(i)
+            pending_list.delete(index)
 
-        i = 0
-        for task_row in tasks:
-            task_name = task_row[0]
-            if task_name == task_test:
-                break
-            else:
-                i += 1
-        
-        tasks.pop(i)
-        task_list.delete(index)
-
-        with open("tasks.json", "w") as f:
+            with open("tasks.json", "w") as f:
                 json.dump(tasks, f, indent=4)
+        else:
+            index = selected_index_completed[0]
+            task = completed_list.get(index)
+
+            task_test_test = task.split(" ")[0:-1]
+            task_test = " ".join(task_test_test)
+
+            i = 0
+            for task_row in tasks:
+                task_name = task_row[0]
+                if task_name == task_test:
+                    break
+                else:
+                    i += 1
+            
+            tasks.pop(i)
+            completed_list.delete(index)
+
+            with open("tasks.json", "w") as f:
+                    json.dump(tasks, f, indent=4)
 
     else:
          messagebox.showerror("Error", "Please select a task first!")
@@ -82,29 +101,35 @@ def del_task():
     
 
 def complete_task():
-    selected_index = task_list.curselection()
+    selected_index_pending = pending_list.curselection()
+    selected_index_completed = completed_list.curselection()
 
-    if selected_index:
-        index = selected_index[0]
-        task = task_list.get(index)
+    if selected_index_pending or selected_index_completed:
+        if selected_index_pending:
+            index = selected_index_pending[0]
+            task = pending_list.get(index)
 
-        task_test_test = task.split(" ")[0:-1]
-        task_test = " ".join(task_test_test)
+            task_test_test = task.split(" ")[0:-1]
+            task_test = " ".join(task_test_test)
 
-        i = 0
-        for task_row in tasks:
-            task_name = task_row[0]
-            if task_name == task_test:
-                break
-            else:
-                i += 1
-        
-        tasks[i][0] = f"✔️ {task_test}"
-        task_list.delete(index)
-        task_list.insert(index, f"✔️ {task}")
+            i = 0
+            for task_row in tasks:
+                task_name = task_row[0]
+                if task_name == task_test:
+                    break
+                else:
+                    i += 1
+            
+            tasks[i][0] = f"✔️ {task_test}"
+            tasks[i][2] = True
+            pending_list.delete(index)
+            completed_list.insert(END, f"✔️ {task}")
 
-        with open("tasks.json", "w") as f:
+            with open("tasks.json", "w") as f:
                 json.dump(tasks, f, indent=4)
+        else:
+            messagebox.showerror("Error", "This task is already completed!")
+
     else:
         messagebox.showerror("Error", "Please select a task first!")
 
@@ -120,7 +145,11 @@ def startup_task_load():
     
     for task in tasks:
          print_task_var = task[0] + " [" + task[1] + "]"
-         task_list.insert(END, print_task_var)
+         if task[2] == False:
+            pending_list.insert(END, print_task_var)
+         else:
+             completed_list.insert(END, print_task_var)
+        
 
     print(tasks)
 
@@ -144,7 +173,7 @@ def startup_task_load():
 
 
 ### To-Do Manager heading
-
+ 
 heading_label = Label(
     root,
     text="TO-DO MANAGER",
@@ -153,11 +182,11 @@ heading_label = Label(
     bg="#1e1e1e",      
     pady=20
 )
-
-heading_label.grid(row=0, column=0, pady=20)
-
+ 
+heading_label.grid(row=0, column=0, columnspan=3, pady=20, sticky="ew")
+ 
 ### Enter a task label 
-
+ 
 ent_label = Label(
     root,
     text="Add a New Task",
@@ -165,11 +194,11 @@ ent_label = Label(
     fg="#ffffff",
     bg="#1e1e1e"
 )
-
-ent_label.grid(row=1, column=0, pady=(10, 5))
-
+ 
+ent_label.grid(row=1, column=0, columnspan=3, pady=(10, 5))
+ 
 ### Enter a task entry 
-
+ 
 ent_entry = Entry(
     root,
     textvariable = task_var,
@@ -180,19 +209,19 @@ ent_entry = Entry(
     insertbackground="white", 
     relief="flat"
 )
-
+ 
 ent_entry.grid(
     row=2,
     column=0,
     padx=(20, 10),
     pady=10,
     ipady=8,
-    sticky="w"
+    sticky="e"
 )
-
-
+ 
+ 
 ### Add Button
-
+ 
 add_button = Button(
     root,
     text="Add Task",
@@ -207,43 +236,44 @@ add_button = Button(
     pady=6,
     cursor="hand2"
 )
-
+ 
 add_button.grid(
     row=2,
     column=2,
     padx=(5, 20),
-    pady=10
+    pady=10,
+    sticky="w"
 )
-
-
+ 
+ 
 ### tasks list
-
-task_list = Listbox(
-    root,
-    height=10,
-    width=50,
-    font=("Segoe UI Symbol", 12),
-    bg="#2d2d2d",          
-    fg="white",
-    selectbackground="#00d4ff",
-    selectforeground="black",
-    relief="flat",
-    bd=0,
-    highlightthickness=0
-)
-
-task_list.grid(
-    row=3,
-    column=0,
-    columnspan=2,
-    padx=20,
-    pady=20,
-    sticky="nsew"
-)
-
-
+ 
+# task_list = Listbox(
+#     root,
+#     height=10,
+#     width=50,
+#     font=("Segoe UI Symbol", 12),
+#     bg="#2d2d2d",          
+#     fg="white",
+#     selectbackground="#00d4ff",
+#     selectforeground="black",
+#     relief="flat",
+#     bd=0,
+#     highlightthickness=0
+# )
+ 
+# task_list.grid(
+#     row=3,
+#     column=0,
+#     columnspan=2,
+#     padx=20,
+#     pady=20,
+#     sticky="nsew"
+# )
+ 
+ 
 # Complete Button
-
+ 
 complete_button = Button(
     root,
     text="✅ Complete",
@@ -258,18 +288,17 @@ complete_button = Button(
     pady=6,
     cursor="hand2"
 )
-
+ 
 complete_button.grid(
-    row=4,
+    row=5,
     column=0,
-    columnspan=1,
     padx=(20, 10),
-    pady=10,
+    pady=(0, 10),
     sticky="ew"
 )
-
+ 
 # Delete Button
-
+ 
 del_button = Button(
     root,
     text="🗑️ Delete",
@@ -284,21 +313,20 @@ del_button = Button(
     pady=6,
     cursor="hand2"
 )
-
+ 
 del_button.grid(
-    row=4,
-    column=1,
-    columnspan=1,
+    row=5,
+    column=2,
     padx=(10, 20),
-    pady=10,
+    pady=(0, 10),
     sticky="ew"
 )
-
+ 
 ### priority system
-
+ 
 style = ttk.Style()
 style.theme_use("clam")
-
+ 
 style.configure(
     "Custom.TCombobox",
     fieldbackground="#2d2d2d",
@@ -308,7 +336,7 @@ style.configure(
     arrowcolor="#00d4ff",
     padding=5
 )
-
+ 
 priority_combobox = ttk.Combobox(
     root,
     values=["HIGH", "MEDIUM", "LOW"],
@@ -317,16 +345,89 @@ priority_combobox = ttk.Combobox(
     font=("Segoe UI", 11),
     style="Custom.TCombobox"
 )
-
+ 
 priority_combobox.set("Priority")
-
+ 
 priority_combobox.grid(
     row=2,
     column=1,
     padx=5,
-    pady=10
+    pady=10,
+    ipady=4,
+    sticky="ew"
+)
+ 
+# Pending Label
+ 
+pending_label = Label(
+    root,
+    text="Pending Tasks",
+    font=("Segoe UI", 12, "bold"),
+    fg="#ffffff",
+    bg="#1e1e1e"
+)
+ 
+pending_label.grid(row=3, column=0, pady=(5, 2))
+ 
+# Completed Label
+ 
+completed_label = Label(
+    root,
+    text="Completed Tasks",
+    font=("Segoe UI", 12, "bold"),
+    fg="#ffffff",
+    bg="#1e1e1e"
+)
+ 
+completed_label.grid(row=3, column=2, pady=(5, 2))
+ 
+### Pending Listbox
+ 
+pending_list = Listbox(
+    root,
+    height=15,
+    width=35,
+    font=("Segoe UI", 12),
+    bg="#2d2d2d",
+    fg="white",
+    selectbackground="#00d4ff",
+    selectforeground="black"
+)
+ 
+pending_list.grid(
+    row=4,
+    column=0,
+    padx=(20, 5),
+    pady=(2, 0),
+    sticky="ew"
+)
+ 
+### Completed Listbox
+ 
+completed_list = Listbox(
+    root,
+    height=15,
+    width=35,
+    font=("Segoe UI", 12),
+    bg="#2d2d2d",
+    fg="#22c55e",
+    selectbackground="#00d4ff",
+    selectforeground="black"
+)
+ 
+completed_list.grid(
+    row=4,
+    column=2,
+    padx=(5, 20),
+    pady=(2, 0),
+    sticky="ew"
 )
 
+
+
+if not os.path.exists("tasks.json"):
+    with open("tasks.json", "w") as f:
+        json.dump([], f)
 startup_task_load()
 
 root.mainloop()
